@@ -1,0 +1,26 @@
+# Builds
+build/
+build-*/
+cmake-build-*/
+out/
+_deps/
+
+# IDEs
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+CMakeSettings.json
+CMakeUserPresets.json
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Salidas temporales de herramientas
+*.wav
+!resources/**/*.wav
+pluginval-logs/
