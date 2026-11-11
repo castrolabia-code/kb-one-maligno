@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Bajar el código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configurar (CMake + Visual Studio 2022 x64)
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
@@ -39,8 +39,20 @@ jobs:
           Invoke-WebRequest -Uri "https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip" -OutFile pluginval.zip
           Expand-Archive pluginval.zip -DestinationPath pluginval
           $exe = Get-ChildItem -Path pluginval -Recurse -Filter pluginval.exe | Select-Object -First 1
-          & $exe.FullName --strictness-level 10 --verbose --validate-in-process --output-dir pluginval-logs --validate "build\KBOne_artefacts\Release\VST3\KB ONE Maligno.vst3"
-          if ($LASTEXITCODE -ne 0) { throw "pluginval falló" }
+          # pluginval es una app de ventana: PowerShell no espera a que termine
+          # salvo con Start-Process -Wait. Sin esto, se lee un código de salida viejo.
+          $vst3 = (Resolve-Path "build\KBOne_artefacts\Release\VST3\KB ONE Maligno.vst3").Path
+          $args = "--strictness-level 10 --verbose --validate-in-process --output-dir pluginval-logs --validate `"$vst3`""
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList $args -NoNewWindow -Wait -PassThru
+          Write-Host "pluginval terminó con código $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { throw "pluginval falló" }
+
+      - name: Guardar logs de pluginval (si falla)
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: pluginval-logs
+          path: pluginval-logs
 
       - name: Instalador (Inno Setup)
         shell: pwsh
@@ -51,7 +63,7 @@ jobs:
           Compress-Archive -Path "build\KBOne_artefacts\Release\VST3\KB ONE Maligno.vst3" -DestinationPath "build\installer\KB-ONE-Maligno-VST3.zip"
 
       - name: Guardar archivos del build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: KB-ONE-Maligno-Windows
           path: |
