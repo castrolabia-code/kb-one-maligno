@@ -1,0 +1,73 @@
+# Build oficial de Windows: compila con Visual Studio 2022 (x64), corre los
+# tests y pluginval nivel 10, arma el instalador y lo publica en la release
+# "ultima-version" del repositorio (link fijo para descargar).
+name: Windows build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Bajar el código
+        uses: actions/checkout@v4
+
+      - name: Configurar (CMake + Visual Studio 2022 x64)
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Compilar Release
+        run: cmake --build build --config Release --parallel
+
+      - name: Tests (ctest)
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: pluginval nivel 10
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip" -OutFile pluginval.zip
+          Expand-Archive pluginval.zip -DestinationPath pluginval
+          $exe = Get-ChildItem -Path pluginval -Recurse -Filter pluginval.exe | Select-Object -First 1
+          & $exe.FullName --strictness-level 10 --verbose --validate-in-process --output-dir pluginval-logs --validate "build\KBOne_artefacts\Release\VST3\KB ONE Maligno.vst3"
+          if ($LASTEXITCODE -ne 0) { throw "pluginval falló" }
+
+      - name: Instalador (Inno Setup)
+        shell: pwsh
+        run: |
+          choco upgrade innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" tools\installer\KBOne.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup falló" }
+          Compress-Archive -Path "build\KBOne_artefacts\Release\VST3\KB ONE Maligno.vst3" -DestinationPath "build\installer\KB-ONE-Maligno-VST3.zip"
+
+      - name: Guardar archivos del build
+        uses: actions/upload-artifact@v4
+        with:
+          name: KB-ONE-Maligno-Windows
+          path: |
+            build/installer/KB-ONE-Maligno-Setup.exe
+            build/installer/KB-ONE-Maligno-VST3.zip
+
+      - name: Publicar en la release "ultima-version"
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete ultima-version --yes --cleanup-tag || true
+          gh release create ultima-version \
+            build/installer/KB-ONE-Maligno-Setup.exe \
+            build/installer/KB-ONE-Maligno-VST3.zip \
+            --target "$GITHUB_SHA" \
+            --title "KB ONE Maligno - última versión" \
+            --notes "Compilado automáticamente desde el commit ${GITHUB_SHA::7}. Descargá KB-ONE-Maligno-Setup.exe, ejecutalo y abrí Reason. Tests y pluginval nivel 10 pasaron en este build." \
+            --prerelease
