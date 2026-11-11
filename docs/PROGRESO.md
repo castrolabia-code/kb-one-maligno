@@ -52,7 +52,23 @@
 
 ---
 
-## Cómo compilar en Windows (comandos exactos)
+## Forma más fácil: instalador automático (no hace falta compilar)
+
+Cada vez que se sube un cambio a `main`, GitHub Actions compila en una máquina
+Windows con Visual Studio 2022 (`.github/workflows/windows-build.yml`), corre
+los tests y pluginval nivel 10, y publica un instalador en:
+
+**https://github.com/castrolabia-code/kb-one-maligno/releases/tag/ultima-version**
+
+1. Bajá `KB-ONE-Maligno-Setup.exe` de ese link.
+2. Hacé doble clic. Si Windows muestra "Windows protegió tu PC" (el instalador
+   todavía no tiene firma digital), tocá **Más información → Ejecutar de todas formas**.
+3. Siguiente → Instalar. El plugin queda en `C:\Program Files\Common Files\VST3\`.
+4. Abrí Reason (ver "Cómo cargarlo en Reason" más abajo).
+
+El instalador lo arma `tools/installer/KBOne.iss` (Inno Setup).
+
+## Cómo compilar en Windows a mano (comandos exactos)
 
 ### Requisitos (una sola vez)
 
