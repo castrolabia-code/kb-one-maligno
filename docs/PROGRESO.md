@@ -62,7 +62,13 @@
 
 ### Compilar
 
-Abrí **"Developer PowerShell for VS 2022"** (menú Inicio) y ejecutá, un comando por vez:
+Abrí **"Developer PowerShell for VS 2022"** (menú Inicio, **sin** "Ejecutar como administrador") y ejecutá, un comando por vez.
+
+Primero andá a una carpeta tuya. Si abre en `C:\WINDOWS\system32`, git falla con "Permission denied":
+
+```bash
+cd $HOME\Documents
+```
 
 ```bash
 git clone https://github.com/castrolabia-code/kb-one-maligno.git
